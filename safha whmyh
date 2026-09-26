@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>نظام الأمان</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+  .overlay {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #000;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+  }
+  .hack-text {
+    font-size: 2rem;
+    color: #ff0000;
+    text-shadow: 0 0 20px #ff0000;
+    margin-bottom: 20px;
+    font-weight: bold;
+    animation: glitch 0.3s infinite;
+  }
+  @keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+  }
+  .loading-bar-container {
+    width: 90%;
+    max-width: 400px;
+    height: 20px;
+    background: #222;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+    border: 1px solid #0f0;
+  }
+  .loading-bar {
+    height: 100%;
+    width: 0%;
+    background: #0f0;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 15px #0f0;
+  }
+  .loading-text {
+    font-size: 1.2rem;
+    color: #0f0;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  .success-text {
+    font-size: 1.5rem;
+    color: #0f0;
+    text-shadow: 0 0 15px #0f0;
+    margin-top: 20px;
+    font-weight: bold;
+    display: none;
+  }
+  .warning {
+    position: fixed;
+    bottom: 10px;
+    left: 0; right: 0;
+    text-align: center;
+    color: #555;
+    font-size: 0.7rem;
+    z-index: 3;
+  }
+
+  /* شاشة أبو نواف */
+  #abuNawafScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: radial-gradient(circle at center, #001a0d 0%, #000 70%);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    overflow: hidden;
+  }
+  #abuNawafScreen.show { display: flex; opacity: 1; }
+
+  #matrixFinal { position: absolute; inset: 0; z-index: 0; opacity: .35; }
+
+  #abuNawafScreen::before {
+    content: "";
+    position: absolute;
+    width: 550px; height: 550px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,255,136,.25), transparent 60%);
+    animation: glowPulse 3s ease-in-out infinite;
+    pointer-events: none; z-index: 1;
+  }
+  @keyframes glowPulse {
+    0%,100% { transform: scale(1); opacity: .7; }
+    50% { transform: scale(1.2); opacity: 1; }
+  }
+
+  .abu-ring {
+    position: absolute;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,255,136,.6);
+    box-shadow: 0 0 40px rgba(0,255,136,.6), inset 0 0 40px rgba(0,255,136,.2);
+    animation: ringRotate 12s linear infinite;
+    pointer-events: none; z-index: 2;
+  }
+  .abu-ring::before {
+    content: "";
+    position: absolute;
+    top: -6px; left: 50%;
+    width: 12px; height: 12px;
+    background: #00ff88;
+    border-radius: 50%;
+    box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88;
+    transform: translateX(-50%);
+  }
+  @keyframes ringRotate { to { transform: rotate(360deg); } }
+
+  .abu-ring2 {
+    position: absolute;
+    width: 380px; height: 380px;
+    border-radius: 50%;
+    border: 1px dashed rgba(0,255,136,.35);
+    animation: ringRotateReverse 20s linear infinite;
+    pointer-events: none; z-index: 2;
+  }
+  @keyframes ringRotateReverse { to { transform: rotate(-360deg); } }
+
+  .abu-content { position: relative; z-index: 3; text-align: center; padding: 20px; }
+
+  .abu-icon {
+    font-size: 80px;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 0 30px rgba(0,255,136,.95));
+    animation: iconIn 1s cubic-bezier(.2,.9,.3,1.4) 0.3s backwards;
+  }
+  @keyframes iconIn {
+    from { opacity: 0; transform: scale(.3) rotate(-30deg); }
+    to { opacity: 1; transform: scale(1) rotate(0); }
+  }
+
+  .abu-name {
+    font-family: 'Tahoma', sans-serif;
+    font-size: clamp(32px, 9vw, 58px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    background: linear-gradient(180deg, #eaffef 0%, #00ff88 40%, #006644 70%, #00ff88 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 30px rgba(0,255,136,.95));
+    animation: nameIn 1.2s cubic-bezier(.2,.9,.3,1.3) 0.6s backwards;
+  }
+  @keyframes nameIn {
+    from { opacity: 0; transform: translateY(30px); filter: blur(10px); }
+    to { opacity: 1; transform: none; filter: blur(0); }
+  }
+
+  .abu-subtitle {
+    font-family: monospace;
+    font-size: 12px;
+    letter-spacing: 5px;
+    color: #4f8e72;
+    margin-bottom: 22px;
+    animation: subIn 1s ease 1.1s backwards;
+  }
+  @keyframes subIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .abu-divider {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px;
+    width: min(400px, 85%);
+    margin: 0 auto 22px;
+    animation: subIn 1s ease 1.4s backwards;
+  }
+  .abu-divider .line {
+    height: 1px; flex: 1;
+    background: linear-gradient(90deg, transparent, #00ff88, transparent);
+  }
+  .abu-divider .star {
+    color: #00ff88;
+    font-size: 16px;
+    text-shadow: 0 0 12px #00ff88;
+    animation: starSpin 4s linear infinite;
+    display: inline-block;
+  }
+  @keyframes starSpin { to { transform: rotate(360deg); } }
+
+  .abu-tagline {
+    font-family: 'Tahoma', sans-serif;
+    font-size: clamp(13px, 3.5vw, 16px);
+    color: #eaffe6;
+    letter-spacing: 1px;
+    line-height: 1.9;
+    animation: subIn 1s ease 1.7s backwards;
+  }
+  .abu-tagline .hl {
+    color: #00ff88;
+    font-weight: bold;
+    text-shadow: 0 0 14px rgba(0,255,136,.8);
+  }
+
+  .abu-badge {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 8px 22px;
+    border: 1px solid rgba(0,255,136,.55);
+    border-radius: 50px;
+    background: rgba(0,255,136,.08);
+    color: #00ff88;
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    box-shadow: 0 0 24px rgba(0,255,136,.4);
+    animation: badgeIn 1s ease 2.2s backwards, badgePulse 2.5s ease-in-out 3.2s infinite;
+  }
+  @keyframes badgeIn {
+    from { opacity: 0; transform: scale(.7); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes badgePulse {
+    0%,100% { box-shadow: 0 0 24px rgba(0,255,136,.4); }
+    50% { box-shadow: 0 0 45px rgba(0,255,136,.9); }
+  }
+
+  .green-particle {
+    position: absolute;
+    bottom: -10px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #00ff88, #006644);
+    box-shadow: 0 0 10px rgba(0,255,136,.9);
+    pointer-events: none;
+    animation: riseGreen linear infinite;
+    z-index: 2;
+  }
+  @keyframes riseGreen {
+    0% { transform: translateY(0) scale(.5); opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: .6; }
+    100% { transform: translateY(-110vh) scale(1.2); opacity: 0; }
+  }
+
+  .replay-btn {
+    position: relative;
+    z-index: 3;
+    margin-top: 30px;
+    padding: 12px 30px;
+    border-radius: 50px;
+    border: 1px solid rgba(0,255,136,.6);
+    background: rgba(0,255,136,.1);
+    color: #00ff88;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: .3s;
+    animation: subIn 1s ease 2.8s backwards;
+  }
+  .replay-btn:hover {
+    background: rgba(0,255,136,.25);
+    box-shadow: 0 0 30px rgba(0,255,136,.7);
+  }
+</style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <div class="overlay" id="overlay">
+        <div class="hack-text" id="hackText">جاري الاختراق...</div>
+
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="bar1"></div>
+        </div>
+        <div class="loading-text" id="text1">جاري تحميل البيانات...</div>
+
+        <div class="loading-bar-container" id="container2" style="display:none;">
+            <div class="loading-bar" id="bar2"></div>
+        </div>
+        <div class="loading-text" id="text2" style="display:none;">جاري نسخ الصور...</div>
+
+        <div class="success-text" id="successMsg">✅ تم اختراق جوالك بنجاح</div>
+    </div>
+
+    <div class="warning">هذه خدعة بصرية فقط - لا يتم اختراق أي جهاز</div>
+
+    <div id="abuNawafScreen">
+      <canvas id="matrixFinal"></canvas>
+      <div class="abu-ring"></div>
+      <div class="abu-ring2"></div>
+      <div id="greenParticles"></div>
+
+      <div class="abu-content">
+        <div class="abu-icon">🛡️</div>
+        <div class="abu-name">أبو نواف</div>
+        <div class="abu-subtitle">ABU NAWAF</div>
+        <div class="abu-divider">
+          <span class="line"></span>
+          <span class="star">✦</span>
+          <span class="line"></span>
+        </div>
+        <div class="abu-tagline">
+          <span class="hl">للأمن السيبراني</span> والعمليات الميدانية<br>
+          Ethical Hacker · Cyber Security
+        </div>
+        <div class="abu-badge">✦ SYSTEM SECURED ✦</div>
+        <button class="replay-btn" onclick="location.reload()">↻ إعادة العرض</button>
+      </div>
+    </div>
+
+<script>
+/* ============================================================
+   اهتزاز فقط (بدون صوت نهائياً)
+   ============================================================ */
+function vibrate(pattern){
+  if(navigator.vibrate) navigator.vibrate(pattern);
+}
+
+/* ============================================================
+   الماتريكس
+   ============================================================ */
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+const fontSize = 16;
+const columns = canvas.width / fontSize;
+const drops = [];
+for (let i = 0; i < columns; i++) drops[i] = 1;
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0f0';
+  ctx.font = fontSize + 'px monospace';
+  for (let i = 0; i < drops.length; i++) {
+    const text = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+    }
+    drops[i]++;
+  }
+}
+
+let matrixInterval = setInterval(drawMatrix, 30);
+
+/* ============================================================
+   ماتريكس داخلي
+   ============================================================ */
+const finalCanvas = document.getElementById('matrixFinal');
+const fctx = finalCanvas.getContext('2d');
+let finalDrops = [];
+let finalCols = 0;
+const finalFontSize = 14;
+
+function initFinalMatrix(){
+  finalCanvas.width = window.innerWidth;
+  finalCanvas.height = window.innerHeight;
+  finalCols = Math.floor(finalCanvas.width / finalFontSize);
+  finalDrops = new Array(finalCols).fill(1);
+}
+
+let finalMatrixInterval = null;
+function drawFinalMatrix(){
+  fctx.fillStyle = 'rgba(0, 10, 5, 0.08)';
+  fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+  fctx.font = finalFontSize + 'px monospace';
+  for(let i = 0; i < finalCols; i++){
+    const t = chars[Math.floor(Math.random() * chars.length)];
+    const y = finalDrops[i] * finalFontSize;
+    fctx.fillStyle = '#c9ffe6';
+    fctx.fillText(t, i * finalFontSize, y);
+    fctx.fillStyle = '#00ff88';
+    fctx.fillText(t, i * finalFontSize, y - finalFontSize);
+    if(y > finalCanvas.height && Math.random() > 0.975) finalDrops[i] = 0;
+    finalDrops[i]++;
+  }
+}
+
+function startFinalMatrix(){
+  initFinalMatrix();
+  if(finalMatrixInterval) clearInterval(finalMatrixInterval);
+  finalMatrixInterval = setInterval(drawFinalMatrix, 50);
+}
+
+/* ============================================================
+   جزيئات خضراء
+   ============================================================ */
+function createGreenParticles(){
+  const container = document.getElementById('greenParticles');
+  for(let i = 0; i < 25; i++){
+    const p = document.createElement('div');
+    p.className = 'green-particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (5 + Math.random() * 7) + 's';
+    p.style.animationDelay = (Math.random() * 6) + 's';
+    p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+    container.appendChild(p);
+  }
+}
+
+/* ============================================================
+   بدء الخدعة (بدون صوت)
+   ============================================================ */
+setTimeout(() => {
+  clearInterval(matrixInterval);
+  canvas.style.display = 'none';
+  document.getElementById('overlay').style.display = 'flex';
+
+  /* فلاشات حمراء + اهتزاز فقط */
+  vibrate([250, 100, 250, 100, 400]);
+
+  document.body.style.background = '#ff0000';
+  setTimeout(() => { document.body.style.background = '#000'; }, 150);
+  setTimeout(() => { document.body.style.background = '#ff0000'; }, 350);
+  setTimeout(() => { document.body.style.background = '#000'; }, 500);
+  setTimeout(() => { document.body.style.background = '#ff0000'; }, 650);
+  setTimeout(() => { document.body.style.background = '#000'; }, 800);
+
+  /* ============ الشريط الأول ============ */
+  let progress1 = 0;
+  const bar1 = document.getElementById('bar1');
+  const text1 = document.getElementById('text1');
+
+  const interval1 = setInterval(() => {
+    progress1 += Math.random() * 15;
+    if (progress1 >= 100) {
+      progress1 = 100;
+      clearInterval(interval1);
+
+      vibrate([300, 100, 300]);
+
+      text1.innerText = 'تم اختراق جوالك!';
+      text1.style.color = '#ff0000';
+      document.getElementById('hackText').innerText = '⚠ تم الاختراق ⚠';
+      document.getElementById('hackText').style.color = '#ff0000';
+
+      setTimeout(() => {
+        document.getElementById('container2').style.display = 'block';
+        document.getElementById('text2').style.display = 'block';
+
+        let progress2 = 0;
+        const bar2 = document.getElementById('bar2');
+        const text2 = document.getElementById('text2');
+
+        const interval2 = setInterval(() => {
+          progress2 += Math.random() * 20;
+
+          if (progress2 >= 100) {
+            progress2 = 100;
+            clearInterval(interval2);
+
+            vibrate([400, 100, 400, 100, 600]);
+
+            text2.innerText = 'تم تحميل جميع الصور والمعلومات بنجاح';
+            text2.style.color = '#0f0';
+            document.getElementById('successMsg').style.display = 'block';
+
+            /* ✨ شاشة أبو نواف بعد 4 ثواني ✨ */
+            setTimeout(() => {
+              showAbuNawafScreen();
+            }, 4000);
+          }
+          bar2.style.width = progress2 + '%';
+        }, 100);
+      }, 1200);
+    }
+    bar1.style.width = progress1 + '%';
+  }, 80);
+}, 3500);
+
+/* ============================================================
+   إظهار شاشة أبو نواف
+   ============================================================ */
+function showAbuNawafScreen(){
+  vibrate([80, 50, 80, 50, 150]);
+  createGreenParticles();
+  startFinalMatrix();
+
+  const screen = document.getElementById('abuNawafScreen');
+  screen.classList.add('show');
+}
+
+/* تحديث الحجم */
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  if(document.getElementById('abuNawafScreen').classList.contains('show')){
+    initFinalMatrix();
+  }
+});
+</script>
+</body>
+</html>
